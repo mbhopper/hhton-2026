@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../../pages/auth/login/LoginPage';
 import { RegisterPage } from '../../pages/auth/register/RegisterPage';
@@ -6,9 +7,8 @@ import { PassPage } from '../../pages/pass/PassPage';
 import { ProfilePage } from '../../pages/profile/ProfilePage';
 import { SettingsPage } from '../../pages/settings/SettingsPage';
 import { defaultAuthorizedRoute, defaultUnauthorizedRoute, routes } from '../../shared/config/routes';
-import { useAppStore } from '../store/AppStoreProvider';
 import { Header } from '../../widgets/header/Header';
-import type { ReactNode } from 'react';
+import { useAppStore } from '../store/AppStoreProvider';
 
 function AuthLayout() {
   return (
@@ -41,8 +41,24 @@ function PrivateLayout() {
   );
 }
 
+function AuthRestoringFallback() {
+  return (
+    <main className="auth-layout">
+      <section className="auth-card app-panel">
+        <div className="section-label">Session</div>
+        <h1>Restoring access…</h1>
+        <p>We are checking the stored digital pass session and loading local mock data.</p>
+      </section>
+    </main>
+  );
+}
+
 function PublicOnlyRoute({ children }: { children: ReactNode }) {
-  const { authStatus } = useAppStore();
+  const authStatus = useAppStore((state) => state.authStatus);
+
+  if (authStatus === 'restoring') {
+    return <AuthRestoringFallback />;
+  }
 
   if (authStatus === 'authenticated') {
     return <Navigate to={defaultAuthorizedRoute} replace />;
@@ -52,7 +68,11 @@ function PublicOnlyRoute({ children }: { children: ReactNode }) {
 }
 
 function ProtectedRoute() {
-  const { authStatus } = useAppStore();
+  const authStatus = useAppStore((state) => state.authStatus);
+
+  if (authStatus === 'restoring') {
+    return <AuthRestoringFallback />;
+  }
 
   if (authStatus !== 'authenticated') {
     return <Navigate to={defaultUnauthorizedRoute} replace />;
@@ -62,11 +82,23 @@ function ProtectedRoute() {
 }
 
 function AppRoutes() {
-  const { authStatus } = useAppStore();
+  const authStatus = useAppStore((state) => state.authStatus);
+
+  if (authStatus === 'restoring') {
+    return <AuthRestoringFallback />;
+  }
 
   return (
     <Routes>
-      <Route path={routes.root} element={<Navigate to={authStatus === 'authenticated' ? defaultAuthorizedRoute : defaultUnauthorizedRoute} replace />} />
+      <Route
+        path={routes.root}
+        element={
+          <Navigate
+            to={authStatus === 'authenticated' ? defaultAuthorizedRoute : defaultUnauthorizedRoute}
+            replace
+          />
+        }
+      />
       <Route element={<AuthLayout />}>
         <Route
           path={routes.login}
