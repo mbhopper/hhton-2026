@@ -1,0 +1,14 @@
+{
+  "name": "@hookform/resolvers",
+  "version": "0.0.0-local",
+  "type": "module",
+  "main": "./zod.js",
+  "exports": {
+    "./zod": "./zod.js"
+  },
+  "types": "./zod.d.ts",
+  "peerDependencies": {
+    "react-hook-form": ">=0.0.0-local",
+    "zod": ">=0.0.0-local"
+  }
+}
