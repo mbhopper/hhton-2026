@@ -298,6 +298,31 @@ input {
   margin: 24px 0 16px;
 }
 
+.auth-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-form__grid {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form__grid--double {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-error {
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.ui-button[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .inline-link {
   color: var(--secondary);
 }
