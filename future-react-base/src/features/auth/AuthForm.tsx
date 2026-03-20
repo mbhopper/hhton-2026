@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../app/store/AppStoreProvider';
-import { defaultPrivateRoute, routes } from '../../shared/config/routes';
+import { defaultAuthorizedRoute, routes } from '../../shared/config/routes';
 import { Button } from '../../shared/ui/button/Button';
 
 interface AuthFormProps {
@@ -9,6 +10,7 @@ interface AuthFormProps {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const { login, register } = useAppStore();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('alex@futurepass.app');
   const [name, setName] = useState('Alex Future');
   const [password, setPassword] = useState('future-pass');
@@ -26,7 +28,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       } else {
         await login(email, password);
       }
-      window.location.hash = `#${defaultPrivateRoute}`;
+      navigate(defaultAuthorizedRoute, { replace: true });
     } finally {
       setIsSubmitting(false);
     }
@@ -70,9 +72,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isSubmitting ? 'Please wait…' : isRegister ? 'Create profile' : 'Continue'}
         </Button>
       </form>
-      <a className="inline-link" href={`#${isRegister ? routes.login : routes.register}`}>
+      <Link className="inline-link" to={isRegister ? routes.login : routes.register}>
         {isRegister ? 'Already have access? Sign in' : 'No account yet? Create one'}
-      </a>
+      </Link>
     </section>
   );
 }

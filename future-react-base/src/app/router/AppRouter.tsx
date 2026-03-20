@@ -1,92 +1,106 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Header } from '../../widgets/header/Header';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../../pages/auth/login/LoginPage';
 import { RegisterPage } from '../../pages/auth/register/RegisterPage';
 import { NotFoundPage } from '../../pages/not-found/NotFoundPage';
 import { PassPage } from '../../pages/pass/PassPage';
 import { ProfilePage } from '../../pages/profile/ProfilePage';
 import { SettingsPage } from '../../pages/settings/SettingsPage';
+import { defaultAuthorizedRoute, defaultUnauthorizedRoute, routes } from '../../shared/config/routes';
 import { useAppStore } from '../store/AppStoreProvider';
-import { defaultPrivateRoute, routes } from '../../shared/config/routes';
+import { Header } from '../../widgets/header/Header';
+import type { ReactNode } from 'react';
 
-const readHashRoute = () => {
-  const value = window.location.hash.replace(/^#/, '');
-  return value || defaultPrivateRoute;
-};
-
-function AuthLayout({ children }: { children: ReactNode }) {
+function AuthLayout() {
   return (
     <main className="auth-layout">
       <section className="auth-side app-panel">
         <div className="section-label">Future React Base</div>
         <h2>App shell starter</h2>
         <p>
-          Hash-based routing keeps the starter dependency-light while still separating public and
-          private layouts.
+          React Router now drives public and private flows with dedicated guards,
+          redirects and a responsive app layout.
         </p>
       </section>
-      {children}
+      <Outlet />
     </main>
   );
 }
 
-function PrivateLayout({ children }: { children: ReactNode }) {
+function PrivateLayout() {
   return (
     <div className="private-layout">
       <div className="app-background app-background--left" aria-hidden="true" />
       <div className="app-background app-background--right" aria-hidden="true" />
-      <div className="app-container">
+      <div className="app-container private-layout__shell">
         <Header />
-        <main className="page-shell">{children}</main>
+        <main className="page-shell">
+          <Outlet />
+        </main>
       </div>
     </div>
   );
 }
 
-export function AppRouter() {
-  const [route, setRoute] = useState(readHashRoute);
+function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const { authStatus } = useAppStore();
 
-  useEffect(() => {
-    const handleHashChange = () => setRoute(readHashRoute());
+  if (authStatus === 'authenticated') {
+    return <Navigate to={defaultAuthorizedRoute} replace />;
+  }
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  return <>{children}</>;
+}
 
-  const screen = useMemo(() => {
-    const isAuthenticated = authStatus === 'authenticated';
-    const privatePages: Record<string, ReactNode> = {
-      [routes.pass]: <PassPage />,
-      [routes.profile]: <ProfilePage />,
-      [routes.settings]: <SettingsPage />,
-    };
+function ProtectedRoute() {
+  const { authStatus } = useAppStore();
 
-    if (!isAuthenticated) {
-      if (route === routes.register) {
-        return <AuthLayout><RegisterPage /></AuthLayout>;
-      }
+  if (authStatus !== 'authenticated') {
+    return <Navigate to={defaultUnauthorizedRoute} replace />;
+  }
 
-      return <AuthLayout><LoginPage /></AuthLayout>;
-    }
+  return <PrivateLayout />;
+}
 
-    if (route === routes.login || route === routes.register || route === '/') {
-      window.location.hash = `#${defaultPrivateRoute}`;
-      return null;
-    }
+function AppRoutes() {
+  const { authStatus } = useAppStore();
 
-    const privatePage = privatePages[route];
+  return (
+    <Routes>
+      <Route path={routes.root} element={<Navigate to={authStatus === 'authenticated' ? defaultAuthorizedRoute : defaultUnauthorizedRoute} replace />} />
+      <Route element={<AuthLayout />}>
+        <Route
+          path={routes.login}
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path={routes.register}
+          element={
+            <PublicOnlyRoute>
+              <RegisterPage />
+            </PublicOnlyRoute>
+          }
+        />
+      </Route>
+      <Route path={routes.app} element={<ProtectedRoute />}>
+        <Route index element={<Navigate to={routes.pass} replace />} />
+        <Route path={routes.passNested} element={<PassPage />} />
+        <Route path={routes.profileNested} element={<ProfilePage />} />
+        <Route path={routes.settingsNested} element={<SettingsPage />} />
+      </Route>
+      <Route path={routes.notFound} element={<NotFoundPage />} />
+      <Route path="*" element={<Navigate to={routes.notFound} replace />} />
+    </Routes>
+  );
+}
 
-    if (privatePage) {
-      return <PrivateLayout>{privatePage}</PrivateLayout>;
-    }
-
-    return (
-      <PrivateLayout>
-        <NotFoundPage />
-      </PrivateLayout>
-    );
-  }, [authStatus, route]);
-
-  return screen;
+export function AppRouter() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
 }

@@ -1,11 +1,12 @@
+import { NavLink } from 'react-router-dom';
 import { routes } from '../../shared/config/routes';
 import { Button } from '../../shared/ui/button/Button';
 import { useAppStore } from '../../app/store/AppStoreProvider';
 
 const navItems = [
-  { href: routes.pass, label: 'Pass' },
-  { href: routes.profile, label: 'Profile' },
-  { href: routes.settings, label: 'Settings' },
+  { to: routes.pass, label: 'Pass' },
+  { to: routes.profile, label: 'Profile' },
+  { to: routes.settings, label: 'Settings' },
 ];
 
 export function Header() {
@@ -13,16 +14,18 @@ export function Header() {
 
   return (
     <header className="app-header app-panel">
-      <div>
-        <a className="brand-mark" href={`#${routes.pass}`}>
-          FP
-        </a>
-      </div>
+      <NavLink className="brand-mark" to={routes.pass} aria-label="Go to pass dashboard">
+        FP
+      </NavLink>
       <nav className="header-nav" aria-label="Primary">
         {navItems.map((item) => (
-          <a key={item.href} className="header-link" href={`#${item.href}`}>
+          <NavLink
+            key={item.to}
+            className={({ isActive }) => `header-link${isActive ? ' header-link--active' : ''}`}
+            to={item.to}
+          >
             {item.label}
-          </a>
+          </NavLink>
         ))}
       </nav>
       <div className="header-user">

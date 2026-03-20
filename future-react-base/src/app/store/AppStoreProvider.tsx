@@ -26,8 +26,16 @@ interface AppStoreContextValue {
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
 
+const AUTH_STORAGE_KEY = 'future-react-base/authenticated';
+
 export function AppStoreProvider({ children }: PropsWithChildren) {
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('authenticated');
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(() => {
+    if (typeof window === 'undefined') {
+      return 'guest';
+    }
+
+    return window.localStorage.getItem(AUTH_STORAGE_KEY) === 'true' ? 'authenticated' : 'guest';
+  });
   const [user, setUser] = useState<UserProfile | null>(null);
   const [passes, setPasses] = useState<DigitalPass[]>([]);
   const [qrSession, setQrSession] = useState<QrSession | null>(null);
@@ -52,17 +60,20 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
     const nextUser = await mockApi.signIn(email);
     setUser(nextUser);
     setAuthStatus('authenticated');
+    window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
   }, []);
 
   const register = useCallback(async (name: string, email: string) => {
     const nextUser = await mockApi.signUp(name, email);
     setUser(nextUser);
     setAuthStatus('authenticated');
+    window.localStorage.setItem(AUTH_STORAGE_KEY, 'true');
   }, []);
 
   const logout = useCallback(() => {
     setAuthStatus('guest');
     setUser(null);
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   const value = useMemo(
