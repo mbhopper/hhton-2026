@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RTK QR Generator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 760px;
+        margin: 24px auto;
+        padding: 0 16px;
+        color: #1f2937;
+      }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0 0 12px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 8px 0;
+      }
+      input {
+        flex: 1;
+        min-width: 240px;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+      }
+      button {
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #93c5fd;
+        cursor: not-allowed;
+      }
+      .muted {
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .ok {
+        color: #065f46;
+      }
+      .error {
+        color: #b91c1c;
+      }
+      #qrcode {
+        margin-top: 12px;
+      }
+      code {
+        word-break: break-all;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  </head>
+  <body>
+    <h1>RTK: Генерация QR</h1>
+
+    <div class="card">
+      <h3>1) Вход</h3>
+      <div class="row">
+        <input id="email" type="email" placeholder="Email" value="test@rtk.ru" />
+        <input id="password" type="password" placeholder="Пароль" value="test123" />
+      </div>
+      <div class="row">
+        <button id="loginBtn">Войти</button>
+      </div>
+      <div id="authStatus" class="muted">Токен не получен</div>
+    </div>
+
+    <div class="card">
+      <h3>2) Генерация ключа</h3>
+      <div class="row">
+        <button id="generateBtn" disabled>Сгенерировать QR</button>
+      </div>
+      <div id="qrStatus" class="muted">Нажмите "Войти", затем "Сгенерировать QR"</div>
+      <div id="meta" class="muted"></div>
+      <div id="qrcode"></div>
+      <p class="muted">Текст ключа: <code id="qrText">—</code></p>
+    </div>
+
+    <script>
+      const authStatus = document.getElementById('authStatus');
+      const qrStatus = document.getElementById('qrStatus');
+      const meta = document.getElementById('meta');
+      const qrText = document.getElementById('qrText');
+      const qrcodeDiv = document.getElementById('qrcode');
+      const loginBtn = document.getElementById('loginBtn');
+      const generateBtn = document.getElementById('generateBtn');
+
+      let token = '';
+      let countdownTimer = null;
+      let expiresAtIso = '';
+
+      function setStatus(el, text, type) {
+        el.textContent = text;
+        el.className = type || 'muted';
+      }
+
+      async function login() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+
+        try {
+          loginBtn.disabled = true;
+          setStatus(authStatus, 'Вход...', 'muted');
+
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.token) {
+            throw new Error(data.message || 'Ошибка входа');
+          }
+
+          token = data.token;
+          generateBtn.disabled = false;
+          setStatus(authStatus, 'Успешный вход. Токен получен.', 'ok');
+          await loadCurrentQr();
+        } catch (e) {
+          setStatus(authStatus, `Ошибка входа: ${e.message}`, 'error');
+          stopCountdown();
+        } finally {
+          loginBtn.disabled = false;
+        }
+      }
+
+      function renderCountdown() {
+        if (!expiresAtIso) return;
+
+        const expiresAt = new Date(expiresAtIso).getTime();
+        const leftSeconds = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+        const expiresText = new Date(expiresAtIso).toLocaleString();
+        meta.textContent = `Действует ${leftSeconds} сек. До: ${expiresText}`;
+
+        if (leftSeconds <= 0) {
+          stopCountdown();
+        }
+      }
+
+      function stopCountdown() {
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+
+      function startCountdown(nextExpiresAtIso) {
+        expiresAtIso = nextExpiresAtIso;
+        stopCountdown();
+        renderCountdown();
+        countdownTimer = setInterval(renderCountdown, 1000);
+      }
+
+      async function loadCurrentQr() {
+        if (!token) return;
+        try {
+          const res = await fetch('/api/qr/current', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || 'Ошибка загрузки текущего QR');
+          }
+
+          if (!data?.data?.qr_code) {
+            meta.textContent = '';
+            qrText.textContent = '—';
+            qrcodeDiv.innerHTML = '';
+            stopCountdown();
+            return;
+          }
+
+          const qrCodeValue = data.data.qr_code;
+          const nextExpiresAt = data.data.expires_at;
+
+          qrcodeDiv.innerHTML = '';
+          const canvas = document.createElement('canvas');
+          await QRCode.toCanvas(canvas, qrCodeValue, { width: 256, margin: 1 });
+          qrcodeDiv.appendChild(canvas);
+          qrText.textContent = qrCodeValue;
+          startCountdown(nextExpiresAt);
+          setStatus(qrStatus, 'Активный QR загружен', 'ok');
+        } catch (_) {
+          // no-op: silently ignore if current QR is absent
+        }
+      }
+
+      async function generate() {
+        if (!token) return;
+
+        try {
+          generateBtn.disabled = true;
+          setStatus(qrStatus, 'Генерация ключа...', 'muted');
+
+          const res = await fetch('/api/qr/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: '{}'
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data?.data?.qr_code) {
+            throw new Error(data.message || 'Ошибка генерации');
+          }
+
+          const qrCodeValue = data.data.qr_code;
+          const expiresAt = data.data.expires_at;
+
+          qrcodeDiv.innerHTML = '';
+          const canvas = document.createElement('canvas');
+          await QRCode.toCanvas(canvas, qrCodeValue, { width: 256, margin: 1 });
+          qrcodeDiv.appendChild(canvas);
+
+          qrText.textContent = qrCodeValue;
+          startCountdown(expiresAt);
+          setStatus(qrStatus, 'QR успешно сгенерирован', 'ok');
+        } catch (e) {
+          setStatus(qrStatus, `Ошибка: ${e.message}`, 'error');
+        } finally {
+          generateBtn.disabled = false;
+        }
+      }
+
+      loginBtn.addEventListener('click', login);
+      generateBtn.addEventListener('click', generate);
+    </script>
+  </body>
+</html>
