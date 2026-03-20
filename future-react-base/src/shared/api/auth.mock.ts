@@ -1,4 +1,5 @@
 import type { AuthSession, User, UserStatus } from '../../entities/user/model';
+import { USER_STATUSES } from '../../entities/user/model';
 import { mockUser } from '../mocks/data';
 
 export type AuthErrorCode = 'auth_error' | 'service_unavailable' | 'network_simulation';
@@ -162,7 +163,7 @@ function readSnapshot(): AuthStorageSnapshot {
 }
 
 function normalizeUserStatus(status?: UserStatus): UserStatus {
-  return status ?? 'active';
+  return status ?? USER_STATUSES.ACTIVE;
 }
 
 function buildUser(name: string, email: string, city = mockUser.city): User {
@@ -178,7 +179,7 @@ function buildUser(name: string, email: string, city = mockUser.city): User {
     name,
     email,
     city,
-    status: 'pending',
+    status: USER_STATUSES.PENDING,
   };
 
   mockUsers.set(email.toLowerCase(), nextUser);
@@ -236,7 +237,7 @@ export const authMockApi = {
     }
 
     const user = buildUser(payload.name, payload.email, payload.city);
-    const activeUser: User = { ...user, status: 'active' };
+    const activeUser: User = { ...user, status: USER_STATUSES.ACTIVE };
     mockUsers.set(payload.email.toLowerCase(), activeUser);
 
     return persistSession(activeUser, payload.remember ?? true);
