@@ -319,6 +319,12 @@ input {
   margin: 24px 0 16px;
 }
 
+.inline-error {
+  margin-top: -4px;
+  color: var(--danger);
+  font-size: 0.95rem;
+}
+
 .inline-link {
   color: var(--secondary);
 }

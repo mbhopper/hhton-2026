@@ -1,7 +1,7 @@
 import { useAppStore } from '../../app/store/AppStoreProvider';
 
 export function ProfileDetails() {
-  const { user } = useAppStore();
+  const user = useAppStore((state) => state.user);
 
   return (
     <section className="profile-card app-panel">
@@ -19,6 +19,10 @@ export function ProfileDetails() {
         <div>
           <dt>Membership</dt>
           <dd>{user?.membershipLevel ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>{user?.status ?? '—'}</dd>
         </div>
         <div>
           <dt>User ID</dt>
