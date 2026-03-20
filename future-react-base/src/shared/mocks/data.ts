@@ -8,6 +8,7 @@ export const mockUser: UserProfile = {
   email: 'alex@futurepass.app',
   city: 'San Francisco',
   membershipLevel: 'Priority',
+  status: 'active',
 };
 
 export const mockPasses: DigitalPass[] = [

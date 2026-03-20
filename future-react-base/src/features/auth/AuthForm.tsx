@@ -9,18 +9,20 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const { login, register } = useAppStore();
+  const { login, register, authError } = useAppStore();
   const navigate = useNavigate();
   const [email, setEmail] = useState('alex@futurepass.app');
   const [name, setName] = useState('Alex Future');
   const [password, setPassword] = useState('future-pass');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isRegister = mode === 'register';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
 
     try {
       if (isRegister) {
@@ -29,6 +31,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         await login(email, password);
       }
       navigate(defaultAuthorizedRoute, { replace: true });
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Authentication failed.');
     } finally {
       setIsSubmitting(false);
     }
@@ -68,6 +72,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             required
           />
         </label>
+        {(formError || authError) && <p className="inline-error">{formError ?? authError?.message}</p>}
         <Button type="submit" fullWidth disabled={isSubmitting}>
           {isSubmitting ? 'Please wait…' : isRegister ? 'Create profile' : 'Continue'}
         </Button>

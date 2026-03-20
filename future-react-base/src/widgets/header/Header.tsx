@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
+import { useAppStore } from '../../app/store/AppStoreProvider';
 import { routes } from '../../shared/config/routes';
 import { Button } from '../../shared/ui/button/Button';
-import { useAppStore } from '../../app/store/AppStoreProvider';
 
 const navItems = [
   { to: routes.pass, label: 'Pass' },
@@ -10,7 +10,8 @@ const navItems = [
 ];
 
 export function Header() {
-  const { user, logout } = useAppStore();
+  const user = useAppStore((state) => state.user);
+  const logout = useAppStore((state) => state.logout);
 
   return (
     <header className="app-header app-panel">
@@ -33,7 +34,7 @@ export function Header() {
           <p className="header-user__name">{user?.name ?? 'Guest'}</p>
           <p className="header-user__meta">{user?.membershipLevel ?? 'Base'} access</p>
         </div>
-        <Button variant="secondary" onClick={logout}>
+        <Button variant="secondary" onClick={() => void logout()}>
           Sign out
         </Button>
       </div>
